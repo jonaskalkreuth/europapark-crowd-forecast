@@ -13,11 +13,12 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
 
 - Europa-Park crowd forecast
   - 1 Skeleton
-    - [ ] **1.1 Setup and page fetcher** — _why leaf: the source, cache rule and year range are settled in ADR 0002 and ADR 0003._
+    - [x] **1.1 Setup and page fetcher** — _why leaf: the source, cache rule and year range are settled in ADR 0002 and ADR 0003._
       - Goal: set up the uv project (Python 3.11) with package `src/europapark_crowd/` and pytest. Write a polite fetcher for Queue-Times month pages (`https://queue-times.com/parks/51/calendar/YYYY/MM`).
       - Inputs: none.
       - Outputs: raw HTML for the season months of 2019 and 2022–2025 cached in git-ignored `data/raw/`. Each page is fetched once, with a delay between requests. 2026 is refused.
       - Done when: tests pass for "a cached page is not re-fetched" and "2026 is refused"; the raw pages are on disk.
+      - Decisions: season months are March–November (45 pages); the guard refuses 2026 months 3–11 only, so 6.1 can fetch January 2026 and 7.1 adds a deliberate override; tests use `monkeypatch` on `requests.get` and `tmp_path` as the cache folder; run with `uv run python -m europapark_crowd.fetch`, 5 s delay after each real fetch, project User-Agent.
     - [ ] **1.2 Parse month pages into a crowd table** — _why leaf: the columns are fixed below; handling of odd values follows from the inspection._ (needs 1.1)
       - Goal: turn each cached month page into rows of one date each, then inspect the result and report findings before handling them.
       - Inputs: cached HTML from 1.1.
@@ -207,7 +208,7 @@ Cross-branch rules:
 
 Work top to bottom. Each line respects the dependency notes in the tree. Before leaf 1, rename the repo and recreate `.venv`.
 
-1. [ ] 1.1 Setup and page fetcher
+1. [x] 1.1 Setup and page fetcher — 2 tests pass; 45 pages (Mar–Nov of 2019, 2022–2025) cached in data/raw/
 2. [ ] 1.2 Parse month pages into a crowd table
 3. [ ] 1.3 Open-day table and feature list
 4. [ ] 1.4 Evaluation harness

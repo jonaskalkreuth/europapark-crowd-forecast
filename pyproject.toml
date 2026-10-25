@@ -1,0 +1,21 @@
+[project]
+name = "europapark-crowd"
+version = "0.1.0"
+description = "Forecast quiet days at Europa-Park from advance information"
+readme = "README.md"
+authors = [
+    { name = "Jonas Kalkreuth", email = "242061889+jonaskalkreuth@users.noreply.github.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.34.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.28,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
