@@ -36,7 +36,7 @@ One number describing how crowded the whole park is on one open day.
 _Avoid_: Busyness, attendance, crowdedness
 
 **Quiet day**:
-An open day whose actual crowd level lies in the bottom quarter of its season's open days.
+An open day whose actual crowd level lies in the bottom quarter of its season's open days. Days tied at the cutoff all count, so slightly more than a quarter can be quiet.
 _Avoid_: Empty day, low day
 
 ## Holidays
@@ -83,10 +83,10 @@ Anything knowable before the predicted season starts, such as calendars, holiday
 _Avoid_: Known features, future-safe data
 
 **Quiet-day precision**:
-The share of predicted quiet days in a season ranking that were actual quiet days.
+The share of predicted quiet days in a season ranking that were actual quiet days. The predicted quiet days are exactly the quarter of the season with the lowest predictions, with ties broken at random.
 
 **Regret**:
-How many crowd-level points the predicted quietest day of a visit window was above the window's actual quietest day.
+How many crowd-level points the predicted quietest day of a visit window was above the window's actual quietest day. If several days tie for the predicted quietest day, their actual crowd levels are averaged.
 
 **Test season**:
 A season predicted from all earlier seasons to measure the model.

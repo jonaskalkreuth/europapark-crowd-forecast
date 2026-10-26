@@ -50,11 +50,23 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
         - Open days per summer: 2019 212, 2022 226, 2023 226, 2024 228, 2025 226.
         - Summer 2019 opened on 6 April, later than any other year (16–26 March).
         - All 96 HALLOWinter days fall into winter; the summer days carry only Summer Season, Halloween or no label (2019).
-    - [ ] **1.4 Evaluation harness** — _why leaf: the metrics, runs and predictor shape are all defined here and in the glossary._ (needs 1.3)
+    - [x] **1.4 Evaluation harness** — _why leaf: the metrics, runs and predictor shape are all defined here and in the glossary._ (needs 1.3)
       - Goal: implement quiet-day precision, Spearman and regret, and the two runs. A predictor is any function that takes the training days and the days to predict and returns a predicted crowd level per day.
       - Inputs: the open-day table from 1.3.
       - Outputs: metric functions; run definitions (run 1: train 2019 and 2022, validate 2023, predict 2024; run 2: add 2023, validate 2024, predict 2025); one printed score table per predictor.
       - Done when: metric tests on hand-made rankings with known answers pass; a dummy predictor produces a score table. If the leaf overruns, regret moves to 1.5.
+      - Decisions: actual quiet days are all days at or below the season's 25th-percentile crowd level, so days tied at the cutoff all count (53–62 days per season). Predicted quiet days are exactly n // 4 days with the lowest predictions, ties broken in a seeded random order, so a yes/no predictor still flags a quarter of the season. Regret averages the actual crowd level of days tied for the predicted quietest day; the function is written and tested here and joins the score table in 1.5. Spearman correlates the ranks of both columns, so no `scipy` is needed. A predictor is `predictor(train, target)` returning one predicted level per target day; the harness drops `crowd_level` from `target` first. The validation stage fits on the train seasons and scores the validation season; the test stage fits on the train seasons plus the validation season and scores the test season. Both stages print; tuning reads validation only. The dummy predictor is a seeded random guesser, which also gives the chance level (precision about 0.25, Spearman about 0).
+      - Plan:
+        1. `src/europapark_crowd/evaluate.py`: `actual_quiet(crowd)`, `predicted_quiet(predicted)`, `quiet_day_precision(actual, predicted)`, `spearman(actual, predicted)`, `regret(actual, predicted, window)`, `RUNS`, `score(predictor, days)` returning one row per run and stage, and `random_predictor`; `uv run python -m europapark_crowd.evaluate` prints its score table.
+        2. `tests/test_evaluate.py` on hand-made data: ties at the cutoff are all actually quiet; `predicted_quiet` picks exactly n // 4 days when all predictions tie, the same days on every call; without ties it picks the lowest predictions; precision, Spearman (same order, reversed order, ties) and regret (including tied predictions) give known answers; `score` passes the right seasons to the predictor, the target has no `crowd_level`, and the table has 4 rows.
+        3. `GLOSSARY.md`: Quiet day notes that ties at the cutoff all count; Quiet-day precision notes that predicted quiet days are the quarter with the lowest predictions.
+        4. Run pytest and the module; check each scored season keeps its full day count (2023 226, 2024 228, 2025 226) and the random guesser lands near precision 0.25 and Spearman 0.
+        5. Record findings here and tick 1.4 in Next up.
+      - Findings:
+        - Actual quiet days per summer: 2019 53 of 212, 2022 58 of 226, 2023 59 of 226, 2024 62 of 228, 2025 57 of 226. Ties at the cutoff lift the quiet share to 25–27%, so chance precision sits slightly above 0.25.
+        - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
+        - The seeded random guesser scores precision 0.30–0.34 and Spearman −0.03 to 0.05. This is the chance level; precision varies by about ±0.06 with only 56–57 picks per season.
+        - The random guesser ignores its training data, so summer 2024 scores the same in run 1 (test) and run 2 (validation).
     - [ ] **1.5 Visit windows** — _why leaf: the list of windows is settled; only the dates need typing in._ (needs 1.4)
       - Goal: write the fixed list of visit windows for 2024, 2025 and 2026 as a small hand-typed data file, using official holiday dates, and wire it into regret.
       - Inputs: the window list: spring, summer and autumn within the summer season; Saturdays of each month; Baden-Württemberg Easter, Whitsun, summer and autumn holidays; French zone B summer holidays; Basel-Stadt summer holidays.
@@ -232,7 +244,7 @@ Work top to bottom. Each line respects the dependency notes in the tree. Before 
 1. [x] 1.1 Setup and page fetcher — 2 tests pass; 45 pages (Mar–Nov of 2019, 2022–2025) cached in data/raw/
 2. [x] 1.2 Parse month pages into a crowd table — 7 tests pass; 1,375 rows (1,230 open); 2019 has no season labels; HALLOWinter bridges Halloween and winter from 2022
 3. [x] 1.3 Open-day table and feature list — 10 new tests pass (17 total); 1,118 open summer days in 5 seasons; summer ends on the first Sunday of November
-4. [ ] 1.4 Evaluation harness
+4. [x] 1.4 Evaluation harness — 9 new tests pass (26 total); random guesser scores precision 0.30–0.34, Spearman ≈ 0; regret tested, joins the table in 1.5
 5. [ ] 1.5 Visit windows
 6. [ ] 1.6 Baselines
 7. [ ] 1.7 First linear model
