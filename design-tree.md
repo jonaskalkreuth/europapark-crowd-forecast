@@ -33,11 +33,23 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
         - 2024 opened 16–17 Mar, closed 18–22 Mar, then reopened on 23 Mar.
         - 2022–2025 hours are one fixed value per label (09:00-18:00 summer and Halloween, 11:00-19:00 HALLOWinter and winter), so they look like a template rather than real hours. 2019 hours vary (09:00-18:00 to 09:00-20:00, plus two event nights).
         - The crowd level saturates: 23 open days sit at 99 or 100. Early 2022 (28 Mar – 8 Apr) and HALLOWinter 2022–2023 hold several 1–2% days. All are left as they are.
-    - [ ] **1.3 Open-day table and feature list** — _why leaf: the feature interface is fixed by the Key decisions._ (needs 1.2)
+    - [x] **1.3 Open-day table and feature list** — _why leaf: the feature interface is fixed by the Key decisions._ (needs 1.2)
       - Goal: keep open days only, label each with its season (for example "summer 2023"), keep summers 2019 and 2022–2025. Add the weekday feature function and the single feature list.
       - Inputs: the crowd table from 1.2.
       - Outputs: the open-day table; a weekday feature function; the feature list that assembles all feature functions.
       - Done when: tests pass for season labelling (including a winter season that crosses New Year) and for the weekday function.
+      - Decisions: season labels always come from dates, never from the season label column (2019 has none). The summer season ends on the first Sunday of November, the last Halloween day; `summer_end(year)` holds this rule so 2.2 can reuse it. Every later day, including HALLOWinter, belongs to the winter season, labelled like "winter 2023/24"; January days belong to the previous year's winter. The 18–22 March 2024 closure is an exception: 16–17 March stay in summer 2024, and a short closure never splits a season. The weekday feature is one integer column, `weekday` (Monday = 0); one-hot encoding waits for the linear model in 1.7.
+      - Plan:
+        1. `src/europapark_crowd/open_days.py`: `summer_end(year)`, `season_of(day)`, and `load_open_days()`, which keeps open days, adds a `season` column and keeps summers 2019 and 2022–2025.
+        2. `src/europapark_crowd/features.py`: `weekday(days)`, `FEATURES = [weekday]`, and `add_features(days)`, which concatenates the columns from every function in `FEATURES`.
+        3. Tests on hand-made DataFrames. `tests/test_open_days.py`: mid-July is summer; the first Sunday of November is summer; the next Monday is winter; January is the previous year's winter; March 2024 days are summer 2024; closed days are dropped; an unlabelled 2019 day still gets a season. `tests/test_features.py`: weekday values on known dates; `add_features` keeps the row count.
+        4. `GLOSSARY.md`: Season is defined by date rules, not an uninterrupted run, and a short closure does not split it; Summer season ends on the first Sunday of November; Winter season starts the next day and includes HALLOWinter; add a HALLOWinter entry.
+        5. Run pytest; check that summer plus non-summer rows reconcile to the 1,230 open days; report open summer days per year.
+      - Findings:
+        - The 1,230 open days split into 1,118 summer days and 112 winter days. The open-day table keeps the 1,118, with no duplicate dates and no missing crowd levels.
+        - Open days per summer: 2019 212, 2022 226, 2023 226, 2024 228, 2025 226.
+        - Summer 2019 opened on 6 April, later than any other year (16–26 March).
+        - All 96 HALLOWinter days fall into winter; the summer days carry only Summer Season, Halloween or no label (2019).
     - [ ] **1.4 Evaluation harness** — _why leaf: the metrics, runs and predictor shape are all defined here and in the glossary._ (needs 1.3)
       - Goal: implement quiet-day precision, Spearman and regret, and the two runs. A predictor is any function that takes the training days and the days to predict and returns a predicted crowd level per day.
       - Inputs: the open-day table from 1.3.
@@ -219,7 +231,7 @@ Work top to bottom. Each line respects the dependency notes in the tree. Before 
 
 1. [x] 1.1 Setup and page fetcher — 2 tests pass; 45 pages (Mar–Nov of 2019, 2022–2025) cached in data/raw/
 2. [x] 1.2 Parse month pages into a crowd table — 7 tests pass; 1,375 rows (1,230 open); 2019 has no season labels; HALLOWinter bridges Halloween and winter from 2022
-3. [ ] 1.3 Open-day table and feature list
+3. [x] 1.3 Open-day table and feature list — 10 new tests pass (17 total); 1,118 open summer days in 5 seasons; summer ends on the first Sunday of November
 4. [ ] 1.4 Evaluation harness
 5. [ ] 1.5 Visit windows
 6. [ ] 1.6 Baselines

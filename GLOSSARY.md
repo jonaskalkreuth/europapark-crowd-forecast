@@ -5,18 +5,21 @@ Predicts how crowded Europa-Park will be on each open day of a season, so a visi
 ## Calendar
 
 **Season**:
-One uninterrupted run of open days, either a summer season or a winter season. Summer and winter are always separate seasons.
+The open days between a season's start and end dates, either a summer season or a winter season. Summer and winter are always separate seasons. A short closure inside a season does not split it, as in 18–22 March 2024.
 _Avoid_: Year, period
 
 **Summer season**:
-The main season, from opening day in spring to the last day of Halloween in early November.
+The main season, from opening day in spring to the first Sunday of November, the last day of Halloween.
 
 **Winter season**:
-The shorter season from late November to early January.
+The shorter season from the day after the summer season ends to early January. It includes HALLOWinter.
 _Avoid_: Christmas season
 
 **Halloween phase**:
 The final part of the summer season, when the park runs its Halloween theme.
+
+**HALLOWinter**:
+The November phase that links the Halloween phase to the rest of the winter season, first seen in 2022. It belongs to the winter season.
 
 **Bridge day**:
 A working day between a public holiday and a weekend, often taken off.
