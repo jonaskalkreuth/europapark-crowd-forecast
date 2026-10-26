@@ -19,11 +19,20 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
       - Outputs: raw HTML for the season months of 2019 and 2022–2025 cached in git-ignored `data/raw/`. Each page is fetched once, with a delay between requests. 2026 is refused.
       - Done when: tests pass for "a cached page is not re-fetched" and "2026 is refused"; the raw pages are on disk.
       - Decisions: season months are March–November (45 pages); the guard refuses 2026 months 3–11 only, so 6.1 can fetch January 2026 and 7.1 adds a deliberate override; tests use `monkeypatch` on `requests.get` and `tmp_path` as the cache folder; run with `uv run python -m europapark_crowd.fetch`, 5 s delay after each real fetch, project User-Agent.
-    - [ ] **1.2 Parse month pages into a crowd table** — _why leaf: the columns are fixed below; handling of odd values follows from the inspection._ (needs 1.1)
+    - [x] **1.2 Parse month pages into a crowd table** — _why leaf: the columns are fixed below; handling of odd values follows from the inspection._ (needs 1.1)
       - Goal: turn each cached month page into rows of one date each, then inspect the result and report findings before handling them.
       - Inputs: cached HTML from 1.1.
       - Outputs: a crowd table with date, crowd level, open or closed, season icon (summer, Halloween, winter) and raw opening hours. Inspection findings on duplicates, gaps and odd values go into this brief as notes.
       - Done when: parser tests pass on a small hand-made HTML snippet; the findings are noted here.
+      - Decisions: parse with BeautifulSoup in `src/europapark_crowd/parse.py`; skip `is-outside-month` padding cells; `load_crowd_table()` rebuilds the DataFrame from `data/raw/` on each call, nothing saved; closed days get a missing crowd value, not 0; the season label is kept as raw text (four labels seen: Summer Season, Halloween, HALLOWinter, Winter Season), handling deferred to inspection; the inspection lives in a committed notebook with saved outputs.
+      - Findings (evidence: [notebooks/inspection/1.2_crowd_table.ipynb](notebooks/inspection/1.2_crowd_table.ipynb)):
+        - 1,375 rows = 275 days (March–November) × 5 years: 1,230 open, 145 closed. No duplicate dates. Every open day has a crowd level and hours.
+        - 2019 pages carry no season label (a clock icon instead), so all 220 open days of 2019 have a missing label. 2022–2025 use four labels: Summer Season, Halloween, HALLOWinter, Winter Season.
+        - In 2022–2025 the Halloween phase is always the 37 days ending on the first Sunday of November. Leaf 2.2 uses this date rule, so 2019 gets a Halloween phase (28 Sep – 3 Nov, start still to verify against an official source). The 2019 summer season also ended on Sunday 3 Nov.
+        - From 2022 the park never closes between Halloween and winter: the HALLOWinter phase (November, median crowd level 17) bridges them. Leaf 1.3 cannot split seasons on a closure gap and must decide where HALLOWinter days belong. In 2019 the park closed 4–22 Nov and winter opened on 23 Nov.
+        - 2024 opened 16–17 Mar, closed 18–22 Mar, then reopened on 23 Mar.
+        - 2022–2025 hours are one fixed value per label (09:00-18:00 summer and Halloween, 11:00-19:00 HALLOWinter and winter), so they look like a template rather than real hours. 2019 hours vary (09:00-18:00 to 09:00-20:00, plus two event nights).
+        - The crowd level saturates: 23 open days sit at 99 or 100. Early 2022 (28 Mar – 8 Apr) and HALLOWinter 2022–2023 hold several 1–2% days. All are left as they are.
     - [ ] **1.3 Open-day table and feature list** — _why leaf: the feature interface is fixed by the Key decisions._ (needs 1.2)
       - Goal: keep open days only, label each with its season (for example "summer 2023"), keep summers 2019 and 2022–2025. Add the weekday feature function and the single feature list.
       - Inputs: the crowd table from 1.2.
@@ -209,7 +218,7 @@ Cross-branch rules:
 Work top to bottom. Each line respects the dependency notes in the tree. Before leaf 1, rename the repo and recreate `.venv`.
 
 1. [x] 1.1 Setup and page fetcher — 2 tests pass; 45 pages (Mar–Nov of 2019, 2022–2025) cached in data/raw/
-2. [ ] 1.2 Parse month pages into a crowd table
+2. [x] 1.2 Parse month pages into a crowd table — 7 tests pass; 1,375 rows (1,230 open); 2019 has no season labels; HALLOWinter bridges Halloween and winter from 2022
 3. [ ] 1.3 Open-day table and feature list
 4. [ ] 1.4 Evaluation harness
 5. [ ] 1.5 Visit windows
