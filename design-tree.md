@@ -168,11 +168,24 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
           | run 2 validate 2024 | 0.351 / 0.258 / 27.4 | 0.509 / 0.367 / 21.6 | +0.158 / +0.109 / −5.8 |
           | run 2 test 2025 | 0.286 / 0.204 / 22.2 | 0.464 / 0.305 / 8.0 | +0.179 / +0.101 / −14.2 |
         - Even as a straight-line trend, season position lifts quiet-day precision from chance level to 0.46–0.51 and Spearman by 0.08–0.11. Regret falls by 6–14 points.
-    - [ ] **2.2 Halloween phase** — _why leaf: the source column exists in the crowd table._ (needs 1.7)
+    - [x] **2.2 Halloween phase** — _why leaf: the source column exists in the crowd table._ (needs 1.7)
       - Goal: add a flag for days in the Halloween phase, read from the season icon kept in 1.2.
       - Inputs: the open-day table with the season icon column.
       - Outputs: one feature function, added to the feature list.
       - Done when: tests pass; inspection confirms one uninterrupted Halloween run per season; the harness prints the score change.
+      - Decisions: the flag comes from the date rule only, not the season label, because 2019 pages carry no label. A day is in the Halloween phase when it lies in the 37 days ending on `summer_end(year)`. The label serves only as a check. The feature is one integer column, `halloween` (1 or 0).
+      - Findings:
+        - Every summer has one uninterrupted run of 37 flagged open days ending on its last summer day: 185 of 1,118 days. Summer 2019 runs 28 Sep – 3 Nov; its start is still unverified against an official source.
+        - The flag equals `season_label == "Halloween"` on all 906 labelled days (2022–2025).
+        - Score change of the linear model, weekday only → weekday + halloween (precision / Spearman / regret):
+
+          | Run and stage | Weekday | Weekday + halloween |
+          |---|---|---|
+          | run 1 validate 2023 | 0.339 / 0.334 / 25.9 | 0.357 / 0.345 / 25.4 |
+          | run 1 test 2024 | 0.351 / 0.258 / 27.4 | 0.351 / 0.301 / 27.1 |
+          | run 2 validate 2024 | 0.351 / 0.258 / 27.4 | 0.351 / 0.301 / 27.1 |
+          | run 2 test 2025 | 0.286 / 0.204 / 22.2 | 0.321 / 0.272 / 21.2 |
+        - Spearman rises by 0.01–0.07 and regret falls by 0.3–0.9 points in every stage. Precision rises by at most 0.04, still near chance, and the model stays below both baselines.
     - [ ] **2.3 Calendar notebook** — _why leaf: it narrates finished work._ (needs 2.1, 2.2)
       - Goal: write the thin narrative notebook for the calendar features and their score changes.
       - Inputs: the `src/` functions from branch 2.
@@ -325,7 +338,7 @@ Work top to bottom. Each line respects the dependency notes in the tree. Before 
 7. [x] 1.7 First linear model — 3 new tests pass (50 total); weekday-only ridge scores Spearman 0.20–0.33, below both baselines; precision 0.29–0.35 (chance level)
 8. [ ] 1.8 Skeleton notebook
 9. [x] 2.1 Season position — 4 new tests pass (54 total); linear model precision 0.46–0.51 (from 0.29–0.35), Spearman +0.08–0.11, regret −6 to −14
-10. [ ] 2.2 Halloween phase
+10. [x] 2.2 Halloween phase — 4 new tests pass (58 total); 37-day run per summer; Spearman +0.01 to +0.07 over weekday only
 11. [ ] 2.3 Calendar notebook
 12. [ ] 3.1.1 Holiday table format and German holidays
 13. [ ] 3.1.2 French holidays

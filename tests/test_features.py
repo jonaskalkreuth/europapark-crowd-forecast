@@ -19,6 +19,7 @@ def test_add_features_keeps_rows_and_adds_columns():
     assert len(result) == 2
     assert result["weekday"].tolist() == [5, 0]
     assert result["days_since_opening"].tolist() == [5, 0]
+    assert result["halloween"].tolist() == [0, 0]
 
 
 def season(dates, label="summer 2024"):
@@ -55,3 +56,34 @@ def test_season_position_keeps_an_unsorted_index():
     result = features.season_position(days)
     assert result.index.tolist() == [10, 20]
     assert result["days_since_opening"].tolist() == [14, 0]
+
+
+def test_halloween_covers_the_37_days_ending_on_summer_end():
+    # Summer 2023 ends on Sunday 5 November, so Halloween runs 30 September to 5 November.
+    days = pd.DataFrame(
+        {"date": pd.to_datetime(["2023-09-29", "2023-09-30", "2023-11-05", "2023-11-06"])}
+    )
+    assert features.halloween(days)["halloween"].tolist() == [0, 1, 1, 0]
+
+
+def test_midsummer_is_not_halloween():
+    days = pd.DataFrame({"date": pd.to_datetime(["2023-07-15"])})
+    assert features.halloween(days)["halloween"].tolist() == [0]
+
+
+def test_2019_gets_halloween_without_a_label():
+    # 2019 pages have no season label; summer 2019 ended on Sunday 3 November.
+    days = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2019-09-27", "2019-09-28", "2019-11-03"]),
+            "season_label": [None, None, None],
+        }
+    )
+    assert features.halloween(days)["halloween"].tolist() == [0, 1, 1]
+
+
+def test_halloween_lines_up_with_a_non_default_index():
+    days = pd.DataFrame(
+        {"date": pd.to_datetime(["2023-07-15", "2023-10-31"])}, index=[10, 20]
+    )
+    assert features.halloween(days)["halloween"].to_dict() == {10: 0, 20: 1}

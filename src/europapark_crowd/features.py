@@ -1,6 +1,13 @@
 """Feature functions: each takes the open-day table and returns new columns."""
 
+from datetime import timedelta
+
 import pandas as pd
+
+from europapark_crowd.open_days import summer_end
+
+# In 2022–2025 the Halloween label always covers the 37 days ending on summer_end().
+HALLOWEEN_DAYS = 37
 
 
 def weekday(days: pd.DataFrame) -> pd.DataFrame:
@@ -18,7 +25,18 @@ def season_position(days: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-FEATURES = [weekday, season_position]
+def halloween(days: pd.DataFrame) -> pd.DataFrame:
+    """Return 1 for days in the Halloween phase, else 0, from the date alone."""
+    # The date rule, not the season label, because 2019 pages carry no label.
+    last = days["date"].dt.year.map(summer_end)
+    first = last - timedelta(days=HALLOWEEN_DAYS - 1)
+    dates = days["date"].dt.date
+    return pd.DataFrame(
+        {"halloween": ((dates >= first) & (dates <= last)).astype(int)}, index=days.index
+    )
+
+
+FEATURES = [weekday, season_position, halloween]
 
 
 def add_features(days: pd.DataFrame) -> pd.DataFrame:
