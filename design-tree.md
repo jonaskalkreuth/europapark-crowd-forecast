@@ -122,7 +122,7 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
         4. Run pytest and the module; check each scored season keeps its day count (2023 226, 2024 228, 2025 226).
         5. Record findings here and tick 1.7 in Next up.
       - Findings:
-        - Every summer season has all 7 weekdays, 30–34 days each. Saturday is the busiest day in every season (mean 71–80); Friday is the quietest in 4 of 5 (mean 41–53); Monday sits above Tuesday–Friday (mean 50–64).
+        - Every summer season has all 7 weekdays, 30–34 days each. Saturday is the busiest day in every season (mean 71–80); Friday is the quietest in 2 of 5, 2022 and 2024 (mean 41–53); Monday sits above Tuesday–Friday (mean 50–64).
         - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
         - Score table (precision / Spearman / regret); both baselines match the bar to beat in 1.6:
 
@@ -143,7 +143,7 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
       - Decisions: the notebook is `notebooks/1_skeleton.ipynb`, committed with its outputs. It defines no functions; short pandas summaries and matplotlib plots are allowed. matplotlib is a dev dependency. The COVID gap is shown as the jump from 2019 to 2022 in the season list, because 2020 and 2021 are never fetched.
       - Findings:
         - The notebook runs top to bottom and reconciles with earlier leaves: 1,375 rows (1,230 open), 1,118 open summer days, 53–62 actual quiet days per season, and the 1.7 score table exactly.
-        - The quietest weekday changes by season: Wednesday in 2019 and 2025, Friday in 2022 and 2024, Tuesday in 2023. This corrects the 1.7 finding that Friday is the quietest in 4 of 5 seasons.
+        - The quietest weekday changes by season: Wednesday in 2019 and 2025, Friday in 2022 and 2024, Tuesday in 2023. The 1.7 finding said 4 of 5 and is now corrected.
   - 2 Calendar features — the Rulantica flag moved to branch 6, because it is constant within every summer season and cannot change a within-season ranking.
     - [x] **2.1 Season position** — _why leaf: both features are defined below._ (needs 1.7)
       - Goal: add week of the season and days since opening day as one feature function.
