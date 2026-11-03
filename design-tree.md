@@ -72,11 +72,30 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
       - Inputs: the window list: spring, summer and autumn within the summer season; Saturdays of each month; Baden-Württemberg Easter, Whitsun, summer and autumn holidays; French zone B summer holidays; Basel-Stadt summer holidays.
       - Outputs: the window data file with a source link for each date range; a loader; regret in the score table.
       - Done when: a loader test passes; the harness prints regret.
-    - [ ] **1.6 Baselines** — _why leaf: both rules are defined in the glossary._ (needs 1.4)
+    - [x] **1.6 Baselines** — _why leaf: both rules are defined in the glossary._ (needs 1.4)
       - Goal: implement the savvy-visitor baseline (Baden-Württemberg school and public holidays from the `holidays` package) and the last-season baseline as predictors.
       - Inputs: the open-day table and the harness.
       - Outputs: two predictors and their score tables, recorded in this brief as "the bar to beat".
       - Done when: baseline tests pass; both score tables are noted here.
+      - Decisions: both baselines live in `src/europapark_crowd/baselines.py` and follow `predictor(train, target)`. The savvy visitor predicts 1 on Saturdays, Sundays and BW school or public holidays (`holidays.Germany(subdiv="BW")`, with and without `categories="school"`), and 0 otherwise; it ignores `train` and never uses holiday pressure. The harness then picks n // 4 of the quiet days at random, as set in 1.4. The last-season baseline copies the latest training season, chosen by date, matching days on ISO calendar week and weekday; ISO weeks keep holiday weeks aligned across years, while week of the season would shift with opening day. A day without a match takes last season's mean for its weekday. No shared holiday table yet; 3.1.1 builds that.
+      - Plan:
+        1. `uv add holidays`.
+        2. `src/europapark_crowd/baselines.py`: `bw_holidays(years)`, `savvy_visitor_predictor`, `last_season_predictor`; `uv run python -m europapark_crowd.baselines` prints both score tables.
+        3. `tests/test_baselines.py` on hand-made data: weekends are busy and a plain weekday is quiet; a BW-only public holiday (Corpus Christi) is busy; a weekday in the BW summer holidays is busy; the savvy visitor ignores `train`; the `holidays` package covers BW summer holidays in every modelled year; last season matches ISO week and weekday across years, copies the latest training season, and fills an unmatched day with the weekday mean.
+        4. `GLOSSARY.md`: the savvy visitor's holidays are BW school and public holidays; the last-season week number is the ISO week, with the weekday-mean fallback.
+        5. Run pytest and the module; check each scored season keeps its full day count.
+      - Findings:
+        - `holidays` 0.108 gives BW school holidays for every modelled year (83–88 days each, weekends included) and 12 BW public holidays per year; 29 dates are both. Adding it pins `python-dateutil` to 2.9.0.post0 (was 3.0.0).
+        - The savvy-visitor rule calls 54–58% of each summer busy.
+        - Last season leaves only 2 target days unmatched (early summer 2024, from 2023); every other day finds its ISO week and weekday.
+        - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
+        - The bar to beat (precision / Spearman); the random guesser from 1.4 scores 0.30–0.34 / ≈0:
+
+          | Predictor | run 1 validate 2023 | run 1 test 2024 | run 2 validate 2024 | run 2 test 2025 |
+          |---|---|---|---|---|
+          | Savvy visitor | 0.429 / 0.450 | 0.368 / 0.355 | 0.368 / 0.355 | 0.429 / 0.352 |
+          | Last season | 0.625 / 0.515 | 0.386 / 0.404 | 0.386 / 0.404 | 0.429 / 0.435 |
+        - Run 1 (test) and run 2 (validation) train on the same seasons, so summer 2024 scores the same in both.
     - [ ] **1.7 First linear model** — _why leaf: weekday feature only, through existing pieces._ (needs 1.3, 1.4)
       - Goal: fit a regularised linear model on the weekday feature through the feature list and the harness, proving the full path works.
       - Inputs: the feature list and the harness.
@@ -246,7 +265,7 @@ Work top to bottom. Each line respects the dependency notes in the tree. Before 
 3. [x] 1.3 Open-day table and feature list — 10 new tests pass (17 total); 1,118 open summer days in 5 seasons; summer ends on the first Sunday of November
 4. [x] 1.4 Evaluation harness — 9 new tests pass (26 total); random guesser scores precision 0.30–0.34, Spearman ≈ 0; regret tested, joins the table in 1.5
 5. [ ] 1.5 Visit windows
-6. [ ] 1.6 Baselines
+6. [x] 1.6 Baselines — 8 new tests pass (34 total); savvy visitor precision 0.37–0.43, last season 0.39–0.63; both beat chance
 7. [ ] 1.7 First linear model
 8. [ ] 1.8 Skeleton notebook
 9. [ ] 2.1 Season position

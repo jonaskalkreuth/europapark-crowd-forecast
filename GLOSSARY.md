@@ -99,11 +99,11 @@ Summer 2026, kept unseen until the final evaluation. Winter has no holdout seaso
 _Avoid_: Test set
 
 **Savvy-visitor baseline**:
-A fixed rule that calls weekends and holidays busy and every other open day quiet.
+A fixed rule that calls weekends and holidays busy and every other open day quiet. Holidays are Baden-Württemberg school and public holidays.
 _Avoid_: Heuristic, naive model
 
 **Last-season baseline**:
-A prediction that copies last season's crowd level on the day with the same week number and weekday.
+A prediction that copies last season's crowd level on the day with the same week number and weekday. The week number is the ISO calendar week. A day with no match takes last season's mean crowd level for its weekday.
 _Avoid_: Persistence model
 
 **Upper-bound experiment**:
