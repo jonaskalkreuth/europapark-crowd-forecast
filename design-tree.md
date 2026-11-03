@@ -67,11 +67,24 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
         - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
         - The seeded random guesser scores precision 0.30–0.34 and Spearman −0.03 to 0.05. This is the chance level; precision varies by about ±0.06 with only 56–57 picks per season.
         - The random guesser ignores its training data, so summer 2024 scores the same in run 1 (test) and run 2 (validation).
-    - [ ] **1.5 Visit windows** — _why leaf: the list of windows is settled; only the dates need typing in._ (needs 1.4)
+    - [x] **1.5 Visit windows** — _why leaf: the list of windows is settled; only the dates need typing in._ (needs 1.4)
       - Goal: write the fixed list of visit windows for 2024, 2025 and 2026 as a small hand-typed data file, using official holiday dates, and wire it into regret.
       - Inputs: the window list: spring, summer and autumn within the summer season; Saturdays of each month; Baden-Württemberg Easter, Whitsun, summer and autumn holidays; French zone B summer holidays; Basel-Stadt summer holidays.
       - Outputs: the window data file with a source link for each date range; a loader; regret in the score table.
       - Done when: a loader test passes; the harness prints regret.
+      - Decisions: holiday windows live in the committed `data/visit_windows.csv` (window, start, end, source), one row per range, both end dates included. Ranges are typed exactly as the source states, from the first to the last holiday day; single school-free days that touch a range join it (BW 31 October; BW Gründonnerstag 6 April 2023), with no other weekend padding. The file covers 2023 to 2026, so run 1's validation season also gets holiday windows. Baden-Württemberg dates come from the KMK tables (the Kultusministerium page now lists only 2025 onward), French zone B from the ministry's open dataset (population "Élèves"; `start_date` is the first holiday day and the last day is the day before `end_date`, read in Paris time), Basel-Stadt 2025–2026 from the canton's open dataset 100397. Calendar seasons (spring March–May, summer June–August, autumn September to the end of the summer season) and "Saturdays in <month>" follow from date rules, so they need no source. A window with fewer than 2 open days is dropped, because its regret is always 0. The score table's `regret` is the mean regret over the target season's windows; `score(predictor, days, holidays)` takes the holiday table as an argument so tests need no real file.
+      - Plan:
+        1. `data/visit_windows.csv`: 24 holiday rows, 6 windows × 2023–2026, each with its source URL.
+        2. `src/europapark_crowd/windows.py`: `load_windows(path)` parses the CSV; `season_windows(days, holidays)` returns a mask per window over one season's open days, keeping only the range of each name that falls in the season.
+        3. `src/europapark_crowd/evaluate.py`: `mean_regret(actual, predicted, windows)`; `score` adds a `regret` column; the module run passes `load_windows()`.
+        4. Tests: `tests/test_windows.py` (loader parses dates; the real file has a source link on every row, ranges run forward, stay within one year, and each window appears once per year 2023–2026; both end days count; another year's range neither replaces this season's nor makes a window; calendar seasons split by month; Saturday windows hold only their month's Saturdays; 1-day windows drop). `tests/test_evaluate.py`: `mean_regret` and the score table's `regret` give known answers.
+        5. `GLOSSARY.md`: Regret notes that a season's regret is the mean over its visit windows.
+      - Findings:
+        - Basel-Stadt summer 2023 (1 Jul – 12 Aug) and 2024 (29 Jun – 10 Aug) come from schulferien.org, not an official source; their CSV rows say "(unofficial)". The canton's open data and iCal feed start in 2025, the old ED page is gone, and edudoc.ch refuses automated access. Schulferien.org ends each range on the Saturday, one day before the canton's own Sunday end (2026: 8 vs 9 August), so these two ranges are probably one day short.
+        - Every holiday range falls fully on open days. Windows per scored season: 2023 16, 2024 17, 2025 17 (6 holiday, 3 calendar-season, 7–8 Saturday windows). "Saturdays in November" (1 day each year) and "Saturdays in March" 2023 (1 day) are dropped.
+        - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
+        - The seeded random guesser scores regret 32.3 (2023), 15.0 (2024) and 35.1 (2025): the chance level for picking the quietest day in a window.
+        - Baseline regret (2023 / 2024 / 2025): savvy visitor 26.0 / 28.5 / 23.8, last season 14.9 / 23.3 / 19.1. The savvy visitor ties on most days inside a window, so its averaged pick is often worse than the random guesser's (15.0 in 2024). `baselines.py` now passes `load_windows()` to `score`.
     - [x] **1.6 Baselines** — _why leaf: both rules are defined in the glossary._ (needs 1.4)
       - Goal: implement the savvy-visitor baseline (Baden-Württemberg school and public holidays from the `holidays` package) and the last-season baseline as predictors.
       - Inputs: the open-day table and the harness.
@@ -264,7 +277,7 @@ Work top to bottom. Each line respects the dependency notes in the tree. Before 
 2. [x] 1.2 Parse month pages into a crowd table — 7 tests pass; 1,375 rows (1,230 open); 2019 has no season labels; HALLOWinter bridges Halloween and winter from 2022
 3. [x] 1.3 Open-day table and feature list — 10 new tests pass (17 total); 1,118 open summer days in 5 seasons; summer ends on the first Sunday of November
 4. [x] 1.4 Evaluation harness — 9 new tests pass (26 total); random guesser scores precision 0.30–0.34, Spearman ≈ 0; regret tested, joins the table in 1.5
-5. [ ] 1.5 Visit windows
+5. [x] 1.5 Visit windows — 13 new tests pass (47 total); random guesser regret 15–35 points over 16–17 windows per season
 6. [x] 1.6 Baselines — 8 new tests pass (34 total); savvy visitor precision 0.37–0.43, last season 0.39–0.63; both beat chance
 7. [ ] 1.7 First linear model
 8. [ ] 1.8 Skeleton notebook

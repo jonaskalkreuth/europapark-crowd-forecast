@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from europapark_crowd.open_days import load_open_days
+from europapark_crowd.windows import load_windows, season_windows
 
 SEED = 0
 
@@ -54,7 +55,12 @@ def regret(actual: pd.Series, predicted: pd.Series, window: pd.Series) -> float:
     return picked - actual.min()
 
 
-def score(predictor, days: pd.DataFrame) -> pd.DataFrame:
+def mean_regret(actual: pd.Series, predicted: pd.Series, windows: dict[str, pd.Series]) -> float:
+    """Return the regret averaged over a season's visit windows."""
+    return np.mean([regret(actual, predicted, window) for window in windows.values()])
+
+
+def score(predictor, days: pd.DataFrame, holidays: pd.DataFrame) -> pd.DataFrame:
     """Return one row of scores per run and stage for a predictor."""
     rows = []
     for run in RUNS:
@@ -75,6 +81,7 @@ def score(predictor, days: pd.DataFrame) -> pd.DataFrame:
                     "days": len(target),
                     "precision": quiet_day_precision(actual, predicted),
                     "spearman": spearman(actual, predicted),
+                    "regret": mean_regret(actual, predicted, season_windows(target, holidays)),
                 }
             )
     return pd.DataFrame(rows).set_index(["run", "stage"])
@@ -87,4 +94,4 @@ def random_predictor(train: pd.DataFrame, target: pd.DataFrame) -> pd.Series:
 
 
 if __name__ == "__main__":
-    print(score(random_predictor, load_open_days()).round(3))
+    print(score(random_predictor, load_open_days(), load_windows()).round(3))

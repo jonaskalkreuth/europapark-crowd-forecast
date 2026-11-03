@@ -5,6 +5,7 @@ import pandas as pd
 
 from europapark_crowd.evaluate import score
 from europapark_crowd.open_days import load_open_days
+from europapark_crowd.windows import load_windows
 
 
 def bw_holidays(years: list[int]) -> set:
@@ -41,4 +42,4 @@ if __name__ == "__main__":
     days = load_open_days()
     for predictor in [savvy_visitor_predictor, last_season_predictor]:
         print(predictor.__name__)
-        print(score(predictor, days).round(3))
+        print(score(predictor, days, load_windows()).round(3))

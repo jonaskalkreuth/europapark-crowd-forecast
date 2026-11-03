@@ -86,7 +86,7 @@ _Avoid_: Known features, future-safe data
 The share of predicted quiet days in a season ranking that were actual quiet days. The predicted quiet days are exactly the quarter of the season with the lowest predictions, with ties broken at random.
 
 **Regret**:
-How many crowd-level points the predicted quietest day of a visit window was above the window's actual quietest day. If several days tie for the predicted quietest day, their actual crowd levels are averaged.
+How many crowd-level points the predicted quietest day of a visit window was above the window's actual quietest day. If several days tie for the predicted quietest day, their actual crowd levels are averaged. A season's regret is the mean over its visit windows.
 
 **Test season**:
 A season predicted from all earlier seasons to measure the model.
