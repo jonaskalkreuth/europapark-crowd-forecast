@@ -135,11 +135,15 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
         - The linear model scores Spearman 0.20–0.33, well above the random guesser but below both baselines. Its quiet-day precision is 0.29–0.35, no better than chance: weekday alone ranks the season but cannot find its quiet quarter.
         - Weekday alone gives only 7 distinct predictions per season, so the seeded tie-break chooses which of the tied weekday's days fill the n // 4 predicted quiet days.
         - Run 1 test and run 2 validation both fit on 2019, 2022 and 2023 and score 2024, so they match exactly.
-    - [ ] **1.8 Skeleton notebook** — _why leaf: it narrates finished work._ (needs 1.2–1.7)
+    - [x] **1.8 Skeleton notebook** — _why leaf: it narrates finished work._ (needs 1.2–1.7)
       - Goal: write the thin narrative notebook covering what the crowd data looks like, the COVID gap, how quiet days are defined, the baselines and the first model.
       - Inputs: the `src/` functions from 1.1–1.7.
       - Outputs: one notebook that only calls `src/` functions.
       - Done when: it runs top to bottom.
+      - Decisions: the notebook is `notebooks/1_skeleton.ipynb`, committed with its outputs. It defines no functions; short pandas summaries and matplotlib plots are allowed. matplotlib is a dev dependency. The COVID gap is shown as the jump from 2019 to 2022 in the season list, because 2020 and 2021 are never fetched.
+      - Findings:
+        - The notebook runs top to bottom and reconciles with earlier leaves: 1,375 rows (1,230 open), 1,118 open summer days, 53–62 actual quiet days per season, and the 1.7 score table exactly.
+        - The quietest weekday changes by season: Wednesday in 2019 and 2025, Friday in 2022 and 2024, Tuesday in 2023. This corrects the 1.7 finding that Friday is the quietest in 4 of 5 seasons.
   - 2 Calendar features — the Rulantica flag moved to branch 6, because it is constant within every summer season and cannot change a within-season ranking.
     - [x] **2.1 Season position** — _why leaf: both features are defined below._ (needs 1.7)
       - Goal: add week of the season and days since opening day as one feature function.
@@ -336,7 +340,7 @@ Work top to bottom. Each line respects the dependency notes in the tree. Before 
 5. [x] 1.5 Visit windows — 13 new tests pass (47 total); random guesser regret 15–35 points over 16–17 windows per season
 6. [x] 1.6 Baselines — 8 new tests pass (34 total); savvy visitor precision 0.37–0.43, last season 0.39–0.63; both beat chance
 7. [x] 1.7 First linear model — 3 new tests pass (50 total); weekday-only ridge scores Spearman 0.20–0.33, below both baselines; precision 0.29–0.35 (chance level)
-8. [ ] 1.8 Skeleton notebook
+8. [x] 1.8 Skeleton notebook — runs top to bottom; tables and plots cover the crowd data, the COVID gap, quiet days, baselines and the weekday model
 9. [x] 2.1 Season position — 4 new tests pass (54 total); linear model precision 0.46–0.51 (from 0.29–0.35), Spearman +0.08–0.11, regret −6 to −14
 10. [x] 2.2 Halloween phase — 4 new tests pass (58 total); 37-day run per summer; Spearman +0.01 to +0.07 over weekday only
 11. [ ] 2.3 Calendar notebook
