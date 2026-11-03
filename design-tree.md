@@ -109,11 +109,32 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
           | Savvy visitor | 0.429 / 0.450 | 0.368 / 0.355 | 0.368 / 0.355 | 0.429 / 0.352 |
           | Last season | 0.625 / 0.515 | 0.386 / 0.404 | 0.386 / 0.404 | 0.429 / 0.435 |
         - Run 1 (test) and run 2 (validation) train on the same seasons, so summer 2024 scores the same in both.
-    - [ ] **1.7 First linear model** — _why leaf: weekday feature only, through existing pieces._ (needs 1.3, 1.4)
+    - [x] **1.7 First linear model** — _why leaf: weekday feature only, through existing pieces._ (needs 1.3, 1.4)
       - Goal: fit a regularised linear model on the weekday feature through the feature list and the harness, proving the full path works.
       - Inputs: the feature list and the harness.
       - Outputs: a linear predictor and its score table next to the baselines.
       - Done when: its score table prints next to the baselines.
+      - Decisions: scikit-learn `Ridge` with a fixed `alpha=1.0`, untuned, because 4.2 owns the regularisation type and strength and needs scikit-learn anyway. The model one-hot encodes `weekday` itself, keeping all 7 columns, and passes any other feature column through; the feature function keeps its single integer column for LightGBM. The predictor takes its columns from `add_features`, minus the open-day table's own columns, so no feature name is hard-coded. `crowd_level` is nullable `Int64` and is cast to float before fitting. The module prints the random guesser, both 1.6 baselines and the linear model in one table.
+      - Plan:
+        1. `uv add scikit-learn`.
+        2. `src/europapark_crowd/linear.py`: `feature_columns(days)`, `linear_predictor(train, target)`; `uv run python -m europapark_crowd.linear` prints the random guesser, both baselines and the linear model in one table with a `model` level.
+        3. `tests/test_linear.py` on two hand-made weeks with an `Int64` crowd level (Saturday 90, other days 30): Saturday is predicted highest and the other days tie; predictions keep a non-default target index without `crowd_level`; ridge shrinks Saturday below 90 but above the training mean.
+        4. Run pytest and the module; check each scored season keeps its day count (2023 226, 2024 228, 2025 226).
+        5. Record findings here and tick 1.7 in Next up.
+      - Findings:
+        - Every summer season has all 7 weekdays, 30–34 days each. Saturday is the busiest day in every season (mean 71–80); Friday is the quietest in 4 of 5 (mean 41–53); Monday sits above Tuesday–Friday (mean 50–64).
+        - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
+        - Score table (precision / Spearman / regret); both baselines match the bar to beat in 1.6:
+
+          | Predictor | run 1 validate 2023 | run 1 test 2024 | run 2 validate 2024 | run 2 test 2025 |
+          |---|---|---|---|---|
+          | Random | 0.339 / −0.033 / 32.3 | 0.298 / 0.045 / 15.0 | 0.298 / 0.045 / 15.0 | 0.339 / 0.006 / 35.1 |
+          | Savvy visitor | 0.429 / 0.450 / 26.0 | 0.368 / 0.355 / 28.5 | 0.368 / 0.355 / 28.5 | 0.429 / 0.352 / 23.8 |
+          | Last season | 0.625 / 0.515 / 14.9 | 0.386 / 0.404 / 23.3 | 0.386 / 0.404 / 23.3 | 0.429 / 0.435 / 19.1 |
+          | Linear (weekday) | 0.339 / 0.334 / 25.9 | 0.351 / 0.258 / 27.4 | 0.351 / 0.258 / 27.4 | 0.286 / 0.204 / 22.2 |
+        - The linear model scores Spearman 0.20–0.33, well above the random guesser but below both baselines. Its quiet-day precision is 0.29–0.35, no better than chance: weekday alone ranks the season but cannot find its quiet quarter.
+        - Weekday alone gives only 7 distinct predictions per season, so the seeded tie-break chooses which of the tied weekday's days fill the n // 4 predicted quiet days.
+        - Run 1 test and run 2 validation both fit on 2019, 2022 and 2023 and score 2024, so they match exactly.
     - [ ] **1.8 Skeleton notebook** — _why leaf: it narrates finished work._ (needs 1.2–1.7)
       - Goal: write the thin narrative notebook covering what the crowd data looks like, the COVID gap, how quiet days are defined, the baselines and the first model.
       - Inputs: the `src/` functions from 1.1–1.7.
@@ -279,7 +300,7 @@ Work top to bottom. Each line respects the dependency notes in the tree. Before 
 4. [x] 1.4 Evaluation harness — 9 new tests pass (26 total); random guesser scores precision 0.30–0.34, Spearman ≈ 0; regret tested, joins the table in 1.5
 5. [x] 1.5 Visit windows — 13 new tests pass (47 total); random guesser regret 15–35 points over 16–17 windows per season
 6. [x] 1.6 Baselines — 8 new tests pass (34 total); savvy visitor precision 0.37–0.43, last season 0.39–0.63; both beat chance
-7. [ ] 1.7 First linear model
+7. [x] 1.7 First linear model — 3 new tests pass (50 total); weekday-only ridge scores Spearman 0.20–0.33, below both baselines; precision 0.29–0.35 (chance level)
 8. [ ] 1.8 Skeleton notebook
 9. [ ] 2.1 Season position
 10. [ ] 2.2 Halloween phase
