@@ -29,6 +29,10 @@ _Avoid_: Brückentag, Fenstertag
 A calendar day on which the park is open to visitors. Only open days get a crowd level.
 _Avoid_: Operating day, park day
 
+**Opening day**:
+The first open day of a season. A closure right after it, as in March 2024, does not move it.
+_Avoid_: Season start, first day
+
 ## Crowd
 
 **Crowd level**:

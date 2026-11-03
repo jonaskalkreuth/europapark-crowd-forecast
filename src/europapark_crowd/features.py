@@ -8,7 +8,17 @@ def weekday(days: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({"weekday": days["date"].dt.day_of_week}, index=days.index)
 
 
-FEATURES = [weekday]
+def season_position(days: pd.DataFrame) -> pd.DataFrame:
+    """Return the week of the season (opening day in week 1) and calendar days since opening day."""
+    opening_day = days.groupby("season")["date"].transform("min")
+    # Calendar days, so a closure inside the season still counts.
+    since = (days["date"] - opening_day).dt.days
+    return pd.DataFrame(
+        {"week_of_season": since // 7 + 1, "days_since_opening": since}, index=days.index
+    )
+
+
+FEATURES = [weekday, season_position]
 
 
 def add_features(days: pd.DataFrame) -> pd.DataFrame:

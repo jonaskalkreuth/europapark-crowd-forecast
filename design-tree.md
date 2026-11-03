@@ -141,11 +141,33 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
       - Outputs: one notebook that only calls `src/` functions.
       - Done when: it runs top to bottom.
   - 2 Calendar features — the Rulantica flag moved to branch 6, because it is constant within every summer season and cannot change a within-season ranking.
-    - [ ] **2.1 Season position** — _why leaf: both features are defined below._ (needs 1.7)
+    - [x] **2.1 Season position** — _why leaf: both features are defined below._ (needs 1.7)
       - Goal: add week of the season and days since opening day as one feature function.
       - Inputs: the open-day table with season labels (1.3).
       - Outputs: one feature function with two columns, added to the feature list.
       - Done when: tests pass on a hand-made season; the harness prints the score change against the weekday-only model.
+      - Decisions: the opening day is the first open day of each season in the open-day table, found by grouping on the `season` column. The opening date is announced in advance, so ADR 0001 allows it. The 18–22 March 2024 closure does not move the 2024 opening day (16 March). `days_since_opening` counts calendar days, so closed days still count; the opening day is 0. `week_of_season` is `days_since_opening // 7 + 1`, so the opening day falls in week 1. `linear.py` stays unchanged: both columns pass through as plain numbers, so the ridge model only learns a straight-line trend; nonlinear use waits for 4.2 and 4.3. The score change comes from a throwaway script, not committed code. `tests/test_linear.py` pins `FEATURES` to weekday only, so the 1.7 tests keep checking the weekday pattern.
+      - Plan:
+        1. `src/europapark_crowd/features.py`: `season_position(days)` returning `week_of_season` and `days_since_opening`; `FEATURES = [weekday, season_position]`.
+        2. `tests/test_features.py` on hand-made seasons: the opening day is day 0 in week 1; day 6 is week 1 and day 7 is week 2; a closure inside the season still counts calendar days; two seasons each count from their own opening day; an unsorted non-default index lines up; `add_features` adds the new columns.
+        3. `tests/test_linear.py`: an autouse fixture monkeypatches `FEATURES` to `[weekday]`.
+        4. `GLOSSARY.md`: add Opening day.
+        5. Run pytest; score the linear model with weekday only and with season position in a throwaway script; check each scored season keeps its day count.
+        6. Record findings here and tick 2.1 in Next up.
+      - Findings:
+        - Every opening day is a Saturday: 2019-04-06, 2022-03-26, 2023-03-25, 2024-03-16, 2025-03-22. Weeks of the season therefore run Saturday to Friday.
+        - The last week of the season is 31 in 2019, 33 in 2022, 2023 and 2025, and 34 in 2024.
+        - The mean crowd level by week of the season is not a straight line. It peaks around weeks 3–4 (Easter), 20–21 (summer holidays) and 32 (Halloween), and dips around weeks 1–2, 5–6 and 27.
+        - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
+        - Score change of the linear model (precision / Spearman / regret), `linear.py` unchanged:
+
+          | Run / stage | Weekday only | + season position | Change |
+          |---|---|---|---|
+          | run 1 validate 2023 | 0.339 / 0.334 / 25.9 | 0.464 / 0.414 / 17.6 | +0.125 / +0.080 / −8.3 |
+          | run 1 test 2024 | 0.351 / 0.258 / 27.4 | 0.509 / 0.367 / 21.6 | +0.158 / +0.109 / −5.8 |
+          | run 2 validate 2024 | 0.351 / 0.258 / 27.4 | 0.509 / 0.367 / 21.6 | +0.158 / +0.109 / −5.8 |
+          | run 2 test 2025 | 0.286 / 0.204 / 22.2 | 0.464 / 0.305 / 8.0 | +0.179 / +0.101 / −14.2 |
+        - Even as a straight-line trend, season position lifts quiet-day precision from chance level to 0.46–0.51 and Spearman by 0.08–0.11. Regret falls by 6–14 points.
     - [ ] **2.2 Halloween phase** — _why leaf: the source column exists in the crowd table._ (needs 1.7)
       - Goal: add a flag for days in the Halloween phase, read from the season icon kept in 1.2.
       - Inputs: the open-day table with the season icon column.
@@ -302,7 +324,7 @@ Work top to bottom. Each line respects the dependency notes in the tree. Before 
 6. [x] 1.6 Baselines — 8 new tests pass (34 total); savvy visitor precision 0.37–0.43, last season 0.39–0.63; both beat chance
 7. [x] 1.7 First linear model — 3 new tests pass (50 total); weekday-only ridge scores Spearman 0.20–0.33, below both baselines; precision 0.29–0.35 (chance level)
 8. [ ] 1.8 Skeleton notebook
-9. [ ] 2.1 Season position
+9. [x] 2.1 Season position — 4 new tests pass (54 total); linear model precision 0.46–0.51 (from 0.29–0.35), Spearman +0.08–0.11, regret −6 to −14
 10. [ ] 2.2 Halloween phase
 11. [ ] 2.3 Calendar notebook
 12. [ ] 3.1.1 Holiday table format and German holidays

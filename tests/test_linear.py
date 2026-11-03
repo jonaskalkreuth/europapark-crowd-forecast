@@ -1,6 +1,14 @@
 import pandas as pd
+import pytest
 
+from europapark_crowd import features
 from europapark_crowd.linear import linear_predictor
+
+
+@pytest.fixture(autouse=True)
+def weekday_only(monkeypatch):
+    # These tests check the weekday pattern, so later features stay out.
+    monkeypatch.setattr(features, "FEATURES", [features.weekday])
 
 
 def two_weeks(saturday=90, other=30):
