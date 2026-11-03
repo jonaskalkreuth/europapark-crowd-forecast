@@ -122,7 +122,7 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
         4. Run pytest and the module; check each scored season keeps its day count (2023 226, 2024 228, 2025 226).
         5. Record findings here and tick 1.7 in Next up.
       - Findings:
-        - Every summer season has all 7 weekdays, 30–34 days each. Saturday is the busiest day in every season (mean 71–80); Friday is the quietest in 2 of 5, 2022 and 2024 (mean 41–53); Monday sits above Tuesday–Friday (mean 50–64).
+        - Every summer season has all 7 weekdays, 30–34 days each. Saturday is the busiest day in every season (mean 71–80); Friday is the quietest in 2 of 5, 2022 and 2024 (mean 41–53); Monday sits above Tuesday–Friday in 4 of 5 seasons (mean 50–64); in 2025 Tuesday (58.8) is above Monday (55.3).
         - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
         - Score table (precision / Spearman / regret); both baselines match the bar to beat in 1.6:
 
@@ -190,11 +190,25 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
           | run 2 validate 2024 | 0.351 / 0.258 / 27.4 | 0.351 / 0.301 / 27.1 |
           | run 2 test 2025 | 0.286 / 0.204 / 22.2 | 0.321 / 0.272 / 21.2 |
         - Spearman rises by 0.01–0.07 and regret falls by 0.3–0.9 points in every stage. Precision rises by at most 0.04, still near chance, and the model stays below both baselines.
-    - [ ] **2.3 Calendar notebook** — _why leaf: it narrates finished work._ (needs 2.1, 2.2)
+    - [x] **2.3 Calendar notebook** — _why leaf: it narrates finished work._ (needs 2.1, 2.2)
       - Goal: write the thin narrative notebook for the calendar features and their score changes.
       - Inputs: the `src/` functions from branch 2.
       - Outputs: one notebook that only calls `src/` functions.
       - Done when: it runs top to bottom.
+      - Decisions: the notebook is `notebooks/2_calendar.ipynb`, committed with its outputs, following 1.8's conventions. It compares feature sets by setting `features.FEATURES` to each list in turn and restoring it afterwards, so `src/` stays unchanged. It scores four sets: weekday, weekday + season position, weekday + halloween, and all three.
+      - Findings:
+        - The notebook runs top to bottom and reconciles with earlier leaves: 1,118 open summer days, scored seasons of 226 / 228 / 226 days, and the 2.1 and 2.2 score tables exactly.
+        - The Halloween phase is busier than the rest of the season by 11–15 points on most weekdays, but by less than 1 point on Tuesday.
+        - Corrected Halloween score change, weekday + season position → all three features (precision / Spearman / regret). It replaces the weekday-only comparison in 2.2, which is outdated because season position is now in the feature list:
+
+          | Run and stage | Weekday + season position | All three | Change |
+          |---|---|---|---|
+          | run 1 validate 2023 | 0.464 / 0.414 / 17.6 | 0.482 / 0.414 / 17.6 | +0.018 / 0.000 / 0.0 |
+          | run 1 test 2024 | 0.509 / 0.367 / 21.6 | 0.491 / 0.366 / 21.6 | −0.018 / −0.001 / 0.0 |
+          | run 2 validate 2024 | 0.509 / 0.367 / 21.6 | 0.491 / 0.366 / 21.6 | −0.018 / −0.001 / 0.0 |
+          | run 2 test 2025 | 0.464 / 0.305 / 8.0 | 0.464 / 0.302 / 8.0 | 0.000 / −0.003 / 0.0 |
+        - On top of season position the Halloween flag adds almost nothing: precision moves by at most 0.02, Spearman by at most 0.003, and regret does not change. The straight-line trend in days since opening already rises towards the season end and absorbs most of the Halloween lift.
+        - The full calendar model beats the last-season baseline on precision and regret in both test seasons (2024: 0.491 vs 0.386, 21.6 vs 23.3; 2025: 0.464 vs 0.429, 8.0 vs 19.1). It still trails on Spearman (0.366 vs 0.404; 0.302 vs 0.435) and on every metric for the 2023 validation season.
   - 3 Holiday features
     - 3.1 Holiday data — covers summers 2019 and 2022–2026; holidays are advance information, so 2026 is allowed here.
       - [ ] **3.1.1 Holiday table format and German holidays** — _why leaf: the format and source are fixed below._ (needs 1.1)
@@ -343,7 +357,7 @@ Work top to bottom. Each line respects the dependency notes in the tree. Before 
 8. [x] 1.8 Skeleton notebook — runs top to bottom; tables and plots cover the crowd data, the COVID gap, quiet days, baselines and the weekday model
 9. [x] 2.1 Season position — 4 new tests pass (54 total); linear model precision 0.46–0.51 (from 0.29–0.35), Spearman +0.08–0.11, regret −6 to −14
 10. [x] 2.2 Halloween phase — 4 new tests pass (58 total); 37-day run per summer; Spearman +0.01 to +0.07 over weekday only
-11. [ ] 2.3 Calendar notebook
+11. [x] 2.3 Calendar notebook — runs top to bottom; Halloween adds almost nothing on top of season position; the calendar model beats last season on test precision and regret
 12. [ ] 3.1.1 Holiday table format and German holidays
 13. [ ] 3.1.2 French holidays
 14. [ ] 3.1.3 Swiss holidays and combined loader
