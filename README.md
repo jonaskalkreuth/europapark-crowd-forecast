@@ -32,7 +32,7 @@ Test seasons, precision / Spearman / regret:
 | Last season (same ISO week and weekday) | 0.386 / 0.404 / 23.3 | 0.429 / 0.435 / 19.1 |
 | Ridge model: weekday, season position, Halloween phase | **0.491** / 0.366 / **21.6** | **0.464** / 0.302 / **8.0** |
 
-The calendar model beats both baselines on quiet-day precision and regret in both test seasons. It still trails the last-season baseline on Spearman. Most of its gain comes from days since opening, used as a straight-line trend through the season. Details and validation scores are in the [design tree](design-tree.md).
+The calendar model beats both baselines on quiet-day precision and regret in both test seasons. It still trails the last-season baseline on Spearman. Most of its gain comes from days since opening, used as a straight-line trend through the season. Validation scores and findings per step are in [reports/findings.md](reports/findings.md); the plan and its decisions are in the [design tree](design-tree.md).
 
 ## What is next
 

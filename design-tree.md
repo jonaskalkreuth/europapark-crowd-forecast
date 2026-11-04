@@ -1,15 +1,15 @@
 # Design tree: europapark-crowd-forecast
 
-Settled input: [GLOSSARY.md](GLOSSARY.md) and [docs/adr/](docs/adr/). Read both before working on any leaf.
+Settled input: [GLOSSARY.md](GLOSSARY.md) and [docs/adr/](docs/adr/). Read both before working on any leaf. Findings of finished leaves live in [reports/findings.md](reports/findings.md).
 
 ## Key decisions
 - **Top-level shape** → walking skeleton first, then branches that plug into it. _Why: every later leaf inherits a running pipeline and a score to beat, so each one ends with a measurable result._
 
-- **Leaf handoff** → every leaf carries a four-line brief here: goal, inputs, outputs, done when. "Done when" names a passing test or a harness metric. _Why: a fresh agent can build any leaf from this file plus the glossary and ADRs, without guessing._
+- **Leaf handoff** → every leaf carries a four-line brief here: goal, inputs, outputs, done when. "Done when" names a passing test or a harness metric. _Why: any leaf can be built from this file plus the glossary and ADRs, without guessing._
 - **Feature interface** → one pure function per feature family, taking the open-day table and returning new columns, assembled by a single list. _Why: feature leaves never touch each other's code and each one is tested on its own._
 
 ## Tree
-Before the first leaf, the user renames the repo to `europapark-crowd-forecast` and recreates `.venv`. Each branch ends with a leaf that writes its thin narrative notebook.
+Each branch ends with a leaf that writes its thin narrative notebook.
 
 - Europa-Park crowd forecast
   - 1 Skeleton
@@ -18,197 +18,77 @@ Before the first leaf, the user renames the repo to `europapark-crowd-forecast` 
       - Inputs: none.
       - Outputs: raw HTML for the season months of 2019 and 2022–2025 cached in git-ignored `data/raw/`. Each page is fetched once, with a delay between requests. 2026 is refused.
       - Done when: tests pass for "a cached page is not re-fetched" and "2026 is refused"; the raw pages are on disk.
-      - Decisions: season months are March–November (45 pages); the guard refuses 2026 months 3–11 only, so 6.1 can fetch January 2026 and 7.1 adds a deliberate override; tests use `monkeypatch` on `requests.get` and `tmp_path` as the cache folder; run with `uv run python -m europapark_crowd.fetch`, 5 s delay after each real fetch, project User-Agent.
+      - Decisions: fetch March–November (45 pages), 5 s apart; the guard refuses only 2026 months 3–11, so the winter leaf can still fetch January 2026.
     - [x] **1.2 Parse month pages into a crowd table** — _why leaf: the columns are fixed below; handling of odd values follows from the inspection._ (needs 1.1)
       - Goal: turn each cached month page into rows of one date each, then inspect the result and report findings before handling them.
       - Inputs: cached HTML from 1.1.
-      - Outputs: a crowd table with date, crowd level, open or closed, season icon (summer, Halloween, winter) and raw opening hours. Inspection findings on duplicates, gaps and odd values go into this brief as notes.
-      - Done when: parser tests pass on a small hand-made HTML snippet; the findings are noted here.
-      - Decisions: parse with BeautifulSoup in `src/europapark_crowd/parse.py`; skip `is-outside-month` padding cells; `load_crowd_table()` rebuilds the DataFrame from `data/raw/` on each call, nothing saved; closed days get a missing crowd value, not 0; the season label is kept as raw text (four labels seen: Summer Season, Halloween, HALLOWinter, Winter Season), handling deferred to inspection; the inspection lives in a committed notebook with saved outputs.
-      - Findings (evidence: [notebooks/inspection/1.2_crowd_table.ipynb](notebooks/inspection/1.2_crowd_table.ipynb)):
-        - 1,375 rows = 275 days (March–November) × 5 years: 1,230 open, 145 closed. No duplicate dates. Every open day has a crowd level and hours.
-        - 2019 pages carry no season label (a clock icon instead), so all 220 open days of 2019 have a missing label. 2022–2025 use four labels: Summer Season, Halloween, HALLOWinter, Winter Season.
-        - In 2022–2025 the Halloween phase is always the 37 days ending on the first Sunday of November. Leaf 2.2 uses this date rule, so 2019 gets a Halloween phase (28 Sep – 3 Nov, start still to verify against an official source). The 2019 summer season also ended on Sunday 3 Nov.
-        - From 2022 the park never closes between Halloween and winter: the HALLOWinter phase (November, median crowd level 17) bridges them. Leaf 1.3 cannot split seasons on a closure gap and must decide where HALLOWinter days belong. In 2019 the park closed 4–22 Nov and winter opened on 23 Nov.
-        - 2024 opened 16–17 Mar, closed 18–22 Mar, then reopened on 23 Mar.
-        - 2022–2025 hours are one fixed value per label (09:00-18:00 summer and Halloween, 11:00-19:00 HALLOWinter and winter), so they look like a template rather than real hours. 2019 hours vary (09:00-18:00 to 09:00-20:00, plus two event nights).
-        - The crowd level saturates: 23 open days sit at 99 or 100. Early 2022 (28 Mar – 8 Apr) and HALLOWinter 2022–2023 hold several 1–2% days. All are left as they are.
+      - Outputs: a crowd table with date, crowd level, open or closed, season icon (summer, Halloween, winter) and raw opening hours.
+      - Done when: parser tests pass on a small hand-made HTML snippet; the findings are noted.
+      - Decisions: the table is rebuilt from `data/raw/` on each call and never saved; closed days get a missing crowd level, not 0, so they cannot pass as quiet days.
+      - Findings: [1.2 Crowd table](reports/findings.md#12-crowd-table).
     - [x] **1.3 Open-day table and feature list** — _why leaf: the feature interface is fixed by the Key decisions._ (needs 1.2)
       - Goal: keep open days only, label each with its season (for example "summer 2023"), keep summers 2019 and 2022–2025. Add the weekday feature function and the single feature list.
       - Inputs: the crowd table from 1.2.
       - Outputs: the open-day table; a weekday feature function; the feature list that assembles all feature functions.
       - Done when: tests pass for season labelling (including a winter season that crosses New Year) and for the weekday function.
-      - Decisions: season labels always come from dates, never from the season label column (2019 has none). The summer season ends on the first Sunday of November, the last Halloween day; `summer_end(year)` holds this rule so 2.2 can reuse it. Every later day, including HALLOWinter, belongs to the winter season, labelled like "winter 2023/24"; January days belong to the previous year's winter. The 18–22 March 2024 closure is an exception: 16–17 March stay in summer 2024, and a short closure never splits a season. The weekday feature is one integer column, `weekday` (Monday = 0); one-hot encoding waits for the linear model in 1.7.
-      - Plan:
-        1. `src/europapark_crowd/open_days.py`: `summer_end(year)`, `season_of(day)`, and `load_open_days()`, which keeps open days, adds a `season` column and keeps summers 2019 and 2022–2025.
-        2. `src/europapark_crowd/features.py`: `weekday(days)`, `FEATURES = [weekday]`, and `add_features(days)`, which concatenates the columns from every function in `FEATURES`.
-        3. Tests on hand-made DataFrames. `tests/test_open_days.py`: mid-July is summer; the first Sunday of November is summer; the next Monday is winter; January is the previous year's winter; March 2024 days are summer 2024; closed days are dropped; an unlabelled 2019 day still gets a season. `tests/test_features.py`: weekday values on known dates; `add_features` keeps the row count.
-        4. `GLOSSARY.md`: Season is defined by date rules, not an uninterrupted run, and a short closure does not split it; Summer season ends on the first Sunday of November; Winter season starts the next day and includes HALLOWinter; add a HALLOWinter entry.
-        5. Run pytest; check that summer plus non-summer rows reconcile to the 1,230 open days; report open summer days per year.
-      - Findings:
-        - The 1,230 open days split into 1,118 summer days and 112 winter days. The open-day table keeps the 1,118, with no duplicate dates and no missing crowd levels.
-        - Open days per summer: 2019 212, 2022 226, 2023 226, 2024 228, 2025 226.
-        - Summer 2019 opened on 6 April, later than any other year (16–26 March).
-        - All 96 HALLOWinter days fall into winter; the summer days carry only Summer Season, Halloween or no label (2019).
+      - Decisions: seasons come from date rules, not the season label, because 2019 has no labels; summer ends on the first Sunday of November and HALLOWinter belongs to winter.
+      - Findings: [1.3 Open-day table](reports/findings.md#13-open-day-table).
     - [x] **1.4 Evaluation harness** — _why leaf: the metrics, runs and predictor shape are all defined here and in the glossary._ (needs 1.3)
       - Goal: implement quiet-day precision, Spearman and regret, and the two runs. A predictor is any function that takes the training days and the days to predict and returns a predicted crowd level per day.
       - Inputs: the open-day table from 1.3.
       - Outputs: metric functions; run definitions (run 1: train 2019 and 2022, validate 2023, predict 2024; run 2: add 2023, validate 2024, predict 2025); one printed score table per predictor.
-      - Done when: metric tests on hand-made rankings with known answers pass; a dummy predictor produces a score table. If the leaf overruns, regret moves to 1.5.
-      - Decisions: actual quiet days are all days at or below the season's 25th-percentile crowd level, so days tied at the cutoff all count (53–62 days per season). Predicted quiet days are exactly n // 4 days with the lowest predictions, ties broken in a seeded random order, so a yes/no predictor still flags a quarter of the season. Regret averages the actual crowd level of days tied for the predicted quietest day; the function is written and tested here and joins the score table in 1.5. Spearman correlates the ranks of both columns, so no `scipy` is needed. A predictor is `predictor(train, target)` returning one predicted level per target day; the harness drops `crowd_level` from `target` first. The validation stage fits on the train seasons and scores the validation season; the test stage fits on the train seasons plus the validation season and scores the test season. Both stages print; tuning reads validation only. The dummy predictor is a seeded random guesser, which also gives the chance level (precision about 0.25, Spearman about 0).
-      - Plan:
-        1. `src/europapark_crowd/evaluate.py`: `actual_quiet(crowd)`, `predicted_quiet(predicted)`, `quiet_day_precision(actual, predicted)`, `spearman(actual, predicted)`, `regret(actual, predicted, window)`, `RUNS`, `score(predictor, days)` returning one row per run and stage, and `random_predictor`; `uv run python -m europapark_crowd.evaluate` prints its score table.
-        2. `tests/test_evaluate.py` on hand-made data: ties at the cutoff are all actually quiet; `predicted_quiet` picks exactly n // 4 days when all predictions tie, the same days on every call; without ties it picks the lowest predictions; precision, Spearman (same order, reversed order, ties) and regret (including tied predictions) give known answers; `score` passes the right seasons to the predictor, the target has no `crowd_level`, and the table has 4 rows.
-        3. `GLOSSARY.md`: Quiet day notes that ties at the cutoff all count; Quiet-day precision notes that predicted quiet days are the quarter with the lowest predictions.
-        4. Run pytest and the module; check each scored season keeps its full day count (2023 226, 2024 228, 2025 226) and the random guesser lands near precision 0.25 and Spearman 0.
-        5. Record findings here and tick 1.4 in Next up.
-      - Findings:
-        - Actual quiet days per summer: 2019 53 of 212, 2022 58 of 226, 2023 59 of 226, 2024 62 of 228, 2025 57 of 226. Ties at the cutoff lift the quiet share to 25–27%, so chance precision sits slightly above 0.25.
-        - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
-        - The seeded random guesser scores precision 0.30–0.34 and Spearman −0.03 to 0.05. This is the chance level; precision varies by about ±0.06 with only 56–57 picks per season.
-        - The random guesser ignores its training data, so summer 2024 scores the same in run 1 (test) and run 2 (validation).
+      - Done when: metric tests on hand-made rankings with known answers pass; a dummy predictor produces a score table.
+      - Decisions: predicted quiet days are exactly a quarter of the season with ties broken at random, so a yes/no predictor is scored on the same footing as a ranking.
+      - Findings: [1.4 Evaluation harness](reports/findings.md#14-evaluation-harness).
     - [x] **1.5 Visit windows** — _why leaf: the list of windows is settled; only the dates need typing in._ (needs 1.4)
       - Goal: write the fixed list of visit windows for 2024, 2025 and 2026 as a small hand-typed data file, using official holiday dates, and wire it into regret.
       - Inputs: the window list: spring, summer and autumn within the summer season; Saturdays of each month; Baden-Württemberg Easter, Whitsun, summer and autumn holidays; French zone B summer holidays; Basel-Stadt summer holidays.
       - Outputs: the window data file with a source link for each date range; a loader; regret in the score table.
       - Done when: a loader test passes; the harness prints regret.
-      - Decisions: holiday windows live in the committed `data/visit_windows.csv` (window, start, end, source), one row per range, both end dates included. Ranges are typed exactly as the source states, from the first to the last holiday day; single school-free days that touch a range join it (BW 31 October; BW Gründonnerstag 6 April 2023), with no other weekend padding. The file covers 2023 to 2026, so run 1's validation season also gets holiday windows. Baden-Württemberg dates come from the KMK tables (the Kultusministerium page now lists only 2025 onward), French zone B from the ministry's open dataset (population "Élèves"; `start_date` is the first holiday day and the last day is the day before `end_date`, read in Paris time), Basel-Stadt 2025–2026 from the canton's open dataset 100397. Calendar seasons (spring March–May, summer June–August, autumn September to the end of the summer season) and "Saturdays in <month>" follow from date rules, so they need no source. A window with fewer than 2 open days is dropped, because its regret is always 0. The score table's `regret` is the mean regret over the target season's windows; `score(predictor, days, holidays)` takes the holiday table as an argument so tests need no real file.
-      - Plan:
-        1. `data/visit_windows.csv`: 24 holiday rows, 6 windows × 2023–2026, each with its source URL.
-        2. `src/europapark_crowd/windows.py`: `load_windows(path)` parses the CSV; `season_windows(days, holidays)` returns a mask per window over one season's open days, keeping only the range of each name that falls in the season.
-        3. `src/europapark_crowd/evaluate.py`: `mean_regret(actual, predicted, windows)`; `score` adds a `regret` column; the module run passes `load_windows()`.
-        4. Tests: `tests/test_windows.py` (loader parses dates; the real file has a source link on every row, ranges run forward, stay within one year, and each window appears once per year 2023–2026; both end days count; another year's range neither replaces this season's nor makes a window; calendar seasons split by month; Saturday windows hold only their month's Saturdays; 1-day windows drop). `tests/test_evaluate.py`: `mean_regret` and the score table's `regret` give known answers.
-        5. `GLOSSARY.md`: Regret notes that a season's regret is the mean over its visit windows.
-      - Findings:
-        - Basel-Stadt summer 2023 (1 Jul – 12 Aug) and 2024 (29 Jun – 10 Aug) come from schulferien.org, not an official source; their CSV rows say "(unofficial)". The canton's open data and iCal feed start in 2025, the old ED page is gone, and edudoc.ch refuses automated access. Schulferien.org ends each range on the Saturday, one day before the canton's own Sunday end (2026: 8 vs 9 August), so these two ranges are probably one day short.
-        - Every holiday range falls fully on open days. Windows per scored season: 2023 16, 2024 17, 2025 17 (6 holiday, 3 calendar-season, 7–8 Saturday windows). "Saturdays in November" (1 day each year) and "Saturdays in March" 2023 (1 day) are dropped.
-        - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
-        - The seeded random guesser scores regret 32.3 (2023), 15.0 (2024) and 35.1 (2025): the chance level for picking the quietest day in a window.
-        - Baseline regret (2023 / 2024 / 2025): savvy visitor 26.0 / 28.5 / 23.8, last season 14.9 / 23.3 / 19.1. The savvy visitor ties on most days inside a window, so its averaged pick is often worse than the random guesser's (15.0 in 2024). `baselines.py` now passes `load_windows()` to `score`.
+      - Decisions: holiday ranges live in `data/visit_windows.csv` with a source per row and cover 2023–2026, so run 1's validation season also gets windows; windows with fewer than 2 open days are dropped, because their regret is always 0.
+      - Findings: [1.5 Visit windows](reports/findings.md#15-visit-windows).
     - [x] **1.6 Baselines** — _why leaf: both rules are defined in the glossary._ (needs 1.4)
       - Goal: implement the savvy-visitor baseline (Baden-Württemberg school and public holidays from the `holidays` package) and the last-season baseline as predictors.
       - Inputs: the open-day table and the harness.
-      - Outputs: two predictors and their score tables, recorded in this brief as "the bar to beat".
-      - Done when: baseline tests pass; both score tables are noted here.
-      - Decisions: both baselines live in `src/europapark_crowd/baselines.py` and follow `predictor(train, target)`. The savvy visitor predicts 1 on Saturdays, Sundays and BW school or public holidays (`holidays.Germany(subdiv="BW")`, with and without `categories="school"`), and 0 otherwise; it ignores `train` and never uses holiday pressure. The harness then picks n // 4 of the quiet days at random, as set in 1.4. The last-season baseline copies the latest training season, chosen by date, matching days on ISO calendar week and weekday; ISO weeks keep holiday weeks aligned across years, while week of the season would shift with opening day. A day without a match takes last season's mean for its weekday. No shared holiday table yet; 3.1.1 builds that.
-      - Plan:
-        1. `uv add holidays`.
-        2. `src/europapark_crowd/baselines.py`: `bw_holidays(years)`, `savvy_visitor_predictor`, `last_season_predictor`; `uv run python -m europapark_crowd.baselines` prints both score tables.
-        3. `tests/test_baselines.py` on hand-made data: weekends are busy and a plain weekday is quiet; a BW-only public holiday (Corpus Christi) is busy; a weekday in the BW summer holidays is busy; the savvy visitor ignores `train`; the `holidays` package covers BW summer holidays in every modelled year; last season matches ISO week and weekday across years, copies the latest training season, and fills an unmatched day with the weekday mean.
-        4. `GLOSSARY.md`: the savvy visitor's holidays are BW school and public holidays; the last-season week number is the ISO week, with the weekday-mean fallback.
-        5. Run pytest and the module; check each scored season keeps its full day count.
-      - Findings:
-        - `holidays` 0.108 gives BW school holidays for every modelled year (83–88 days each, weekends included) and 12 BW public holidays per year; 29 dates are both. Adding it pins `python-dateutil` to 2.9.0.post0 (was 3.0.0).
-        - The savvy-visitor rule calls 54–58% of each summer busy.
-        - Last season leaves only 2 target days unmatched (early summer 2024, from 2023); every other day finds its ISO week and weekday.
-        - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
-        - The bar to beat (precision / Spearman); the random guesser from 1.4 scores 0.30–0.34 / ≈0:
-
-          | Predictor | run 1 validate 2023 | run 1 test 2024 | run 2 validate 2024 | run 2 test 2025 |
-          |---|---|---|---|---|
-          | Savvy visitor | 0.429 / 0.450 | 0.368 / 0.355 | 0.368 / 0.355 | 0.429 / 0.352 |
-          | Last season | 0.625 / 0.515 | 0.386 / 0.404 | 0.386 / 0.404 | 0.429 / 0.435 |
-        - Run 1 (test) and run 2 (validation) train on the same seasons, so summer 2024 scores the same in both.
+      - Outputs: two predictors and their score tables, the bar to beat.
+      - Done when: baseline tests pass; both score tables are noted.
+      - Decisions: last season matches days on ISO week and weekday, because ISO weeks keep holiday weeks aligned across years while week of the season shifts with opening day.
+      - Findings: [1.6 Baselines](reports/findings.md#16-baselines).
     - [x] **1.7 First linear model** — _why leaf: weekday feature only, through existing pieces._ (needs 1.3, 1.4)
       - Goal: fit a regularised linear model on the weekday feature through the feature list and the harness, proving the full path works.
       - Inputs: the feature list and the harness.
       - Outputs: a linear predictor and its score table next to the baselines.
       - Done when: its score table prints next to the baselines.
-      - Decisions: scikit-learn `Ridge` with a fixed `alpha=1.0`, untuned, because 4.2 owns the regularisation type and strength and needs scikit-learn anyway. The model one-hot encodes `weekday` itself, keeping all 7 columns, and passes any other feature column through; the feature function keeps its single integer column for LightGBM. The predictor takes its columns from `add_features`, minus the open-day table's own columns, so no feature name is hard-coded. `crowd_level` is nullable `Int64` and is cast to float before fitting. The module prints the random guesser, both 1.6 baselines and the linear model in one table.
-      - Plan:
-        1. `uv add scikit-learn`.
-        2. `src/europapark_crowd/linear.py`: `feature_columns(days)`, `linear_predictor(train, target)`; `uv run python -m europapark_crowd.linear` prints the random guesser, both baselines and the linear model in one table with a `model` level.
-        3. `tests/test_linear.py` on two hand-made weeks with an `Int64` crowd level (Saturday 90, other days 30): Saturday is predicted highest and the other days tie; predictions keep a non-default target index without `crowd_level`; ridge shrinks Saturday below 90 but above the training mean.
-        4. Run pytest and the module; check each scored season keeps its day count (2023 226, 2024 228, 2025 226).
-        5. Record findings here and tick 1.7 in Next up.
-      - Findings:
-        - Every summer season has all 7 weekdays, 30–34 days each. Saturday is the busiest day in every season (mean 71–80); Friday is the quietest in 2 of 5, 2022 and 2024 (mean 41–53); Monday sits above Tuesday–Friday in 4 of 5 seasons (mean 50–64); in 2025 Tuesday (58.8) is above Monday (55.3).
-        - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
-        - Score table (precision / Spearman / regret); both baselines match the bar to beat in 1.6:
-
-          | Predictor | run 1 validate 2023 | run 1 test 2024 | run 2 validate 2024 | run 2 test 2025 |
-          |---|---|---|---|---|
-          | Random | 0.339 / −0.033 / 32.3 | 0.298 / 0.045 / 15.0 | 0.298 / 0.045 / 15.0 | 0.339 / 0.006 / 35.1 |
-          | Savvy visitor | 0.429 / 0.450 / 26.0 | 0.368 / 0.355 / 28.5 | 0.368 / 0.355 / 28.5 | 0.429 / 0.352 / 23.8 |
-          | Last season | 0.625 / 0.515 / 14.9 | 0.386 / 0.404 / 23.3 | 0.386 / 0.404 / 23.3 | 0.429 / 0.435 / 19.1 |
-          | Linear (weekday) | 0.339 / 0.334 / 25.9 | 0.351 / 0.258 / 27.4 | 0.351 / 0.258 / 27.4 | 0.286 / 0.204 / 22.2 |
-        - The linear model scores Spearman 0.20–0.33, well above the random guesser but below both baselines. Its quiet-day precision is 0.29–0.35, no better than chance: weekday alone ranks the season but cannot find its quiet quarter.
-        - Weekday alone gives only 7 distinct predictions per season, so the seeded tie-break chooses which of the tied weekday's days fill the n // 4 predicted quiet days.
-        - Run 1 test and run 2 validation both fit on 2019, 2022 and 2023 and score 2024, so they match exactly.
+      - Decisions: ridge with a fixed `alpha=1.0`, untuned, because 4.2 owns regularisation; the model one-hot encodes weekday itself, so the feature keeps one integer column for LightGBM.
+      - Findings: [1.7 First linear model](reports/findings.md#17-first-linear-model).
     - [x] **1.8 Skeleton notebook** — _why leaf: it narrates finished work._ (needs 1.2–1.7)
       - Goal: write the thin narrative notebook covering what the crowd data looks like, the COVID gap, how quiet days are defined, the baselines and the first model.
       - Inputs: the `src/` functions from 1.1–1.7.
-      - Outputs: one notebook that only calls `src/` functions.
+      - Outputs: [notebooks/1_skeleton.ipynb](notebooks/1_skeleton.ipynb), which only calls `src/` functions.
       - Done when: it runs top to bottom.
-      - Decisions: the notebook is `notebooks/1_skeleton.ipynb`, committed with its outputs. It defines no functions; short pandas summaries and matplotlib plots are allowed. matplotlib is a dev dependency. The COVID gap is shown as the jump from 2019 to 2022 in the season list, because 2020 and 2021 are never fetched.
-      - Findings:
-        - The notebook runs top to bottom and reconciles with earlier leaves: 1,375 rows (1,230 open), 1,118 open summer days, 53–62 actual quiet days per season, and the 1.7 score table exactly.
-        - The quietest weekday changes by season: Wednesday in 2019 and 2025, Friday in 2022 and 2024, Tuesday in 2023. The 1.7 finding said 4 of 5 and is now corrected.
+      - Decisions: the notebook is committed with its outputs and defines no functions; the COVID gap shows as the jump from 2019 to 2022.
   - 2 Calendar features — the Rulantica flag moved to branch 6, because it is constant within every summer season and cannot change a within-season ranking.
     - [x] **2.1 Season position** — _why leaf: both features are defined below._ (needs 1.7)
       - Goal: add week of the season and days since opening day as one feature function.
       - Inputs: the open-day table with season labels (1.3).
       - Outputs: one feature function with two columns, added to the feature list.
       - Done when: tests pass on a hand-made season; the harness prints the score change against the weekday-only model.
-      - Decisions: the opening day is the first open day of each season in the open-day table, found by grouping on the `season` column. The opening date is announced in advance, so ADR 0001 allows it. The 18–22 March 2024 closure does not move the 2024 opening day (16 March). `days_since_opening` counts calendar days, so closed days still count; the opening day is 0. `week_of_season` is `days_since_opening // 7 + 1`, so the opening day falls in week 1. `linear.py` stays unchanged: both columns pass through as plain numbers, so the ridge model only learns a straight-line trend; nonlinear use waits for 4.2 and 4.3. The score change comes from a throwaway script, not committed code. `tests/test_linear.py` pins `FEATURES` to weekday only, so the 1.7 tests keep checking the weekday pattern.
-      - Plan:
-        1. `src/europapark_crowd/features.py`: `season_position(days)` returning `week_of_season` and `days_since_opening`; `FEATURES = [weekday, season_position]`.
-        2. `tests/test_features.py` on hand-made seasons: the opening day is day 0 in week 1; day 6 is week 1 and day 7 is week 2; a closure inside the season still counts calendar days; two seasons each count from their own opening day; an unsorted non-default index lines up; `add_features` adds the new columns.
-        3. `tests/test_linear.py`: an autouse fixture monkeypatches `FEATURES` to `[weekday]`.
-        4. `GLOSSARY.md`: add Opening day.
-        5. Run pytest; score the linear model with weekday only and with season position in a throwaway script; check each scored season keeps its day count.
-        6. Record findings here and tick 2.1 in Next up.
-      - Findings:
-        - Every opening day is a Saturday: 2019-04-06, 2022-03-26, 2023-03-25, 2024-03-16, 2025-03-22. Weeks of the season therefore run Saturday to Friday.
-        - The last week of the season is 31 in 2019, 33 in 2022, 2023 and 2025, and 34 in 2024.
-        - The mean crowd level by week of the season is not a straight line. It peaks around weeks 3–4 (Easter), 20–21 (summer holidays) and 32 (Halloween), and dips around weeks 1–2, 5–6 and 27.
-        - Each scored season keeps its full day count: 2023 226, 2024 228, 2025 226.
-        - Score change of the linear model (precision / Spearman / regret), `linear.py` unchanged:
-
-          | Run / stage | Weekday only | + season position | Change |
-          |---|---|---|---|
-          | run 1 validate 2023 | 0.339 / 0.334 / 25.9 | 0.464 / 0.414 / 17.6 | +0.125 / +0.080 / −8.3 |
-          | run 1 test 2024 | 0.351 / 0.258 / 27.4 | 0.509 / 0.367 / 21.6 | +0.158 / +0.109 / −5.8 |
-          | run 2 validate 2024 | 0.351 / 0.258 / 27.4 | 0.509 / 0.367 / 21.6 | +0.158 / +0.109 / −5.8 |
-          | run 2 test 2025 | 0.286 / 0.204 / 22.2 | 0.464 / 0.305 / 8.0 | +0.179 / +0.101 / −14.2 |
-        - Even as a straight-line trend, season position lifts quiet-day precision from chance level to 0.46–0.51 and Spearman by 0.08–0.11. Regret falls by 6–14 points.
+      - Decisions: the opening day is announced in advance, so ADR 0001 allows it; days since opening counts calendar days, and the ridge model uses it as a straight-line trend until 4.2 and 4.3.
+      - Findings: [2.1 Season position](reports/findings.md#21-season-position).
     - [x] **2.2 Halloween phase** — _why leaf: the source column exists in the crowd table._ (needs 1.7)
       - Goal: add a flag for days in the Halloween phase, read from the season icon kept in 1.2.
       - Inputs: the open-day table with the season icon column.
       - Outputs: one feature function, added to the feature list.
       - Done when: tests pass; inspection confirms one uninterrupted Halloween run per season; the harness prints the score change.
-      - Decisions: the flag comes from the date rule only, not the season label, because 2019 pages carry no label. A day is in the Halloween phase when it lies in the 37 days ending on `summer_end(year)`. The label serves only as a check. The feature is one integer column, `halloween` (1 or 0).
-      - Findings:
-        - Every summer has one uninterrupted run of 37 flagged open days ending on its last summer day: 185 of 1,118 days. Summer 2019 runs 28 Sep – 3 Nov; its start is still unverified against an official source.
-        - The flag equals `season_label == "Halloween"` on all 906 labelled days (2022–2025).
-        - Score change of the linear model, weekday only → weekday + halloween (precision / Spearman / regret):
-
-          | Run and stage | Weekday | Weekday + halloween |
-          |---|---|---|
-          | run 1 validate 2023 | 0.339 / 0.334 / 25.9 | 0.357 / 0.345 / 25.4 |
-          | run 1 test 2024 | 0.351 / 0.258 / 27.4 | 0.351 / 0.301 / 27.1 |
-          | run 2 validate 2024 | 0.351 / 0.258 / 27.4 | 0.351 / 0.301 / 27.1 |
-          | run 2 test 2025 | 0.286 / 0.204 / 22.2 | 0.321 / 0.272 / 21.2 |
-        - Spearman rises by 0.01–0.07 and regret falls by 0.3–0.9 points in every stage. Precision rises by at most 0.04, still near chance, and the model stays below both baselines.
+      - Decisions: the flag comes from the date rule (the 37 days ending on the summer's last day), because 2019 has no labels; the label serves only as a check.
+      - Findings: [2.2 and 2.3](reports/findings.md#22-and-23-halloween-phase-and-calendar-model).
     - [x] **2.3 Calendar notebook** — _why leaf: it narrates finished work._ (needs 2.1, 2.2)
       - Goal: write the thin narrative notebook for the calendar features and their score changes.
       - Inputs: the `src/` functions from branch 2.
-      - Outputs: one notebook that only calls `src/` functions.
+      - Outputs: [notebooks/2_calendar.ipynb](notebooks/2_calendar.ipynb), which only calls `src/` functions.
       - Done when: it runs top to bottom.
-      - Decisions: the notebook is `notebooks/2_calendar.ipynb`, committed with its outputs, following 1.8's conventions. It compares feature sets by setting `features.FEATURES` to each list in turn and restoring it afterwards, so `src/` stays unchanged. It scores four sets: weekday, weekday + season position, weekday + halloween, and all three.
-      - Findings:
-        - The notebook runs top to bottom and reconciles with earlier leaves: 1,118 open summer days, scored seasons of 226 / 228 / 226 days, and the 2.1 and 2.2 score tables exactly.
-        - The Halloween phase is busier than the rest of the season by 11–15 points on most weekdays, but by less than 1 point on Tuesday.
-        - Corrected Halloween score change, weekday + season position → all three features (precision / Spearman / regret). It replaces the weekday-only comparison in 2.2, which is outdated because season position is now in the feature list:
-
-          | Run and stage | Weekday + season position | All three | Change |
-          |---|---|---|---|
-          | run 1 validate 2023 | 0.464 / 0.414 / 17.6 | 0.482 / 0.414 / 17.6 | +0.018 / 0.000 / 0.0 |
-          | run 1 test 2024 | 0.509 / 0.367 / 21.6 | 0.491 / 0.366 / 21.6 | −0.018 / −0.001 / 0.0 |
-          | run 2 validate 2024 | 0.509 / 0.367 / 21.6 | 0.491 / 0.366 / 21.6 | −0.018 / −0.001 / 0.0 |
-          | run 2 test 2025 | 0.464 / 0.305 / 8.0 | 0.464 / 0.302 / 8.0 | 0.000 / −0.003 / 0.0 |
-        - On top of season position the Halloween flag adds almost nothing: precision moves by at most 0.02, Spearman by at most 0.003, and regret does not change. The straight-line trend in days since opening already rises towards the season end and absorbs most of the Halloween lift.
-        - The full calendar model beats the last-season baseline on precision and regret in both test seasons (2024: 0.491 vs 0.386, 21.6 vs 23.3; 2025: 0.464 vs 0.429, 8.0 vs 19.1). It still trails on Spearman (0.366 vs 0.404; 0.302 vs 0.435) and on every metric for the 2023 validation season.
+      - Decisions: it scores four feature sets by swapping the feature list in the notebook, so `src/` stays unchanged.
+      - Findings: [2.2 and 2.3](reports/findings.md#22-and-23-halloween-phase-and-calendar-model).
   - 3 Holiday features
     - 3.1 Holiday data — covers summers 2019 and 2022–2026; holidays are advance information, so 2026 is allowed here.
       - [ ] **3.1.1 Holiday table format and German holidays** — _why leaf: the format and source are fixed below._ (needs 1.1)
@@ -345,19 +225,19 @@ Cross-branch rules:
 
 ## Next up
 
-Work top to bottom. Each line respects the dependency notes in the tree. Before leaf 1, rename the repo and recreate `.venv`.
+Work top to bottom. Each line respects the dependency notes in the tree.
 
-1. [x] 1.1 Setup and page fetcher — 2 tests pass; 45 pages (Mar–Nov of 2019, 2022–2025) cached in data/raw/
-2. [x] 1.2 Parse month pages into a crowd table — 7 tests pass; 1,375 rows (1,230 open); 2019 has no season labels; HALLOWinter bridges Halloween and winter from 2022
-3. [x] 1.3 Open-day table and feature list — 10 new tests pass (17 total); 1,118 open summer days in 5 seasons; summer ends on the first Sunday of November
-4. [x] 1.4 Evaluation harness — 9 new tests pass (26 total); random guesser scores precision 0.30–0.34, Spearman ≈ 0; regret tested, joins the table in 1.5
-5. [x] 1.5 Visit windows — 13 new tests pass (47 total); random guesser regret 15–35 points over 16–17 windows per season
-6. [x] 1.6 Baselines — 8 new tests pass (34 total); savvy visitor precision 0.37–0.43, last season 0.39–0.63; both beat chance
-7. [x] 1.7 First linear model — 3 new tests pass (50 total); weekday-only ridge scores Spearman 0.20–0.33, below both baselines; precision 0.29–0.35 (chance level)
-8. [x] 1.8 Skeleton notebook — runs top to bottom; tables and plots cover the crowd data, the COVID gap, quiet days, baselines and the weekday model
-9. [x] 2.1 Season position — 4 new tests pass (54 total); linear model precision 0.46–0.51 (from 0.29–0.35), Spearman +0.08–0.11, regret −6 to −14
-10. [x] 2.2 Halloween phase — 4 new tests pass (58 total); 37-day run per summer; Spearman +0.01 to +0.07 over weekday only
-11. [x] 2.3 Calendar notebook — runs top to bottom; Halloween adds almost nothing on top of season position; the calendar model beats last season on test precision and regret
+1. [x] 1.1 Setup and page fetcher — 45 month pages cached
+2. [x] 1.2 Parse month pages into a crowd table — 1,375 rows, 1,230 open days
+3. [x] 1.3 Open-day table and feature list — 1,118 open summer days in 5 seasons
+4. [x] 1.4 Evaluation harness — random guesser sets the chance level: precision 0.30–0.34, Spearman ≈ 0
+5. [x] 1.5 Visit windows — 16–17 windows per season; random regret 15–35 points
+6. [x] 1.6 Baselines — savvy visitor precision 0.37–0.43, last season 0.39–0.63
+7. [x] 1.7 First linear model — weekday-only ridge stays below both baselines
+8. [x] 1.8 Skeleton notebook — narrates the crowd data, quiet days, baselines and the weekday model
+9. [x] 2.1 Season position — linear precision rises to 0.46–0.51
+10. [x] 2.2 Halloween phase — one 37-day run per summer
+11. [x] 2.3 Calendar notebook — the calendar model beats last season on test precision and regret
 12. [ ] 3.1.1 Holiday table format and German holidays
 13. [ ] 3.1.2 French holidays
 14. [ ] 3.1.3 Swiss holidays and combined loader
